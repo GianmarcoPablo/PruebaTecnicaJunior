@@ -1,4 +1,3 @@
-
 export const ListOfMovies = ({ movies }) => {
     return (
         <ul className="movies">

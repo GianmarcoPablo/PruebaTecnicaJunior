@@ -1,54 +1,35 @@
+import { useCallback, useState } from "react";
 import "./App.css";
 import { Movies } from "./components/Movies";
-import { useMovies } from "./hooks/useMovies";
-import { useEffect, useRef, useState } from "react";
-
-export const useSearch = () => {
-    const [query, setQuery] = useState("");
-    const [error, setError] = useState(null);
-    const isFirstInput = useRef(true);
-
-    useEffect(() => {
-        if(isFirstInput.current) {
-            isFirstInput.current = query === "";
-            return;
-        }
-        if (query === "") {
-            setError("Please enter a movie name");
-            return;
-        }
-        if (query.match(/^[0-9]+$/)) {
-            setError("Please enter a valid movie name");
-            return;
-        }
-        if (query.length < 3) {
-            setError("Please enter at least 3 characters");
-            return;
-        }
-        setError(null);
-    }, [query]);
-
-    return {
-        query,
-        setQuery,
-        error,
-    };
-};
+import { useMovies, useSearch } from "./hooks";
+import debounce from "just-debounce-it";
 
 export const App = () => {
-    const { movies } = useMovies();
+    const [sort, setSort] = useState(false);
     const { query, setQuery, error } = useSearch();
+    const { movies, getMovies, loading } = useMovies({ query, sort }); // hook que trae las peliculas
+
+    const deboundcedGetMovies = useCallback(
+        debounce((query) => {
+            getMovies({ query });
+        }, 1000),
+        [getMovies]
+    );
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        console.log(query);
+        getMovies({ query });
     };
 
     const handleChange = (e) => {
         const newQuery = e.target.value;
         setQuery(newQuery);
+        deboundcedGetMovies(newQuery);
     };
 
+    const handleSort = () => {
+        setSort(!sort);
+    };
 
     return (
         <div className="page">
@@ -61,12 +42,17 @@ export const App = () => {
                         onChange={handleChange}
                         placeholder="Avenger, Star Wars, The Matrix ...."
                     />
+                    <input
+                        type="checkbox"
+                        checked={sort}
+                        onChange={handleSort}
+                    />
                     <button type="submit">Search</button>
                 </form>
                 {error && <p style={{ color: "red" }}>{error}</p>}
             </header>
             <main>
-                <Movies movies={movies} />
+                {loading ? <p>Loading...</p> : <Movies movies={movies} />}
             </main>
         </div>
     );
